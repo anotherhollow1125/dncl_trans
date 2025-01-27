@@ -1,0 +1,3 @@
+/target
+.env
+gpt_responses/*
