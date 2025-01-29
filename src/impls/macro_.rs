@@ -12,7 +12,7 @@ pub struct MacroInput {
     pub model: Option<String>,
     pub seed: Option<u64>,
     pub max_completion_tokens: Option<u64>,
-    pub prompt: TokenStream,
+    pub dncl_code: TokenStream,
 }
 
 impl Parse for MacroInput {
@@ -52,21 +52,33 @@ impl Parse for MacroInput {
                     let value = input.parse::<LitStr>()?;
                     let file_path = value.value();
 
-                    file_content = Some(fs::read_to_string(file_path)
-                        .into_syn(value.span())?);
+                    file_content = Some(fs::read_to_string(file_path).into_syn(value.span())?);
                 }
                 _ => return Err(syn::Error::new(ident.span(), "unexpected field")),
             }
             parse_puncts(input)?;
         }
 
-        let prompt: TokenStream = if let Some(file_content) = file_content {
+        let dncl_code: TokenStream = if let Some(file_content) = file_content {
+            if file_content.is_empty() {
+                return Err(syn::Error::new(Span::call_site(), "file is empty"));
+            }
+
             LitStr::new(&file_content, Span::call_site()).into_token_stream()
         } else if input.peek(LitStr) {
             let lit = input.parse::<LitStr>()?;
             let value = lit.value().replace("\n", ";");
+
+            if value.is_empty() {
+                return Err(syn::Error::new(lit.span(), "code is empty"));
+            }
+
             LitStr::new(&value, lit.span()).into_token_stream()
         } else {
+            if input.is_empty() {
+                return Err(syn::Error::new(Span::call_site(), "code is empty"));
+            }
+
             input.parse::<TokenStream>()?
         };
 
@@ -74,11 +86,14 @@ impl Parse for MacroInput {
             model,
             seed,
             max_completion_tokens,
-            prompt,
+            dncl_code,
         })
     }
 }
 
+/// `Result<T, E>` -> `syn::Result<T>` に変換するトレイト
+///
+/// `res.into_syn(span)?;` のような使い方を想定
 pub trait IntoSynRes<T> {
     fn into_syn(self, span: Span) -> syn::Result<T>;
 }

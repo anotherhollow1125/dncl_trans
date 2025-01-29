@@ -165,7 +165,7 @@ DNCLの仕様ではありませんが、トランスパイルの都合上入力�
 
 次にDNCLのプログラムが与えられますので、エントリポイントとなる `main` 関数を含めたRustプログラムへトランスパイルしてください。
 
-なお、 `rand` 等のサードパーティクレートはユーザー側が自分で `Cargo.toml` に追加するため、存在するものと仮定して構いません。
+なお、 `rand` 等のサードパーティクレートはユーザー側が自分で `Cargo.toml` に追加するため、使用しても構いませんが、不必要なクレートは含めないようにしてください。
 "#;
 
 fn transpile(
@@ -173,21 +173,21 @@ fn transpile(
         model,
         seed,
         max_completion_tokens,
-        prompt,
+        dncl_code,
     }: MacroInput,
 ) -> syn::Result<String> {
-    let span = prompt.span();
-    let prompt = prompt.to_string().replace(";", "\n");
-    let prompt = format!("```dncl\n{}\n```", prompt);
+    let span = dncl_code.span();
+    let dncl_code = dncl_code.to_string().replace(";", "\n");
+    let dncl_code = format!("```dncl\n{}\n```", dncl_code);
 
-    if let Some(cache) = load_cache(&prompt) {
+    if let Some(cache) = load_cache(&dncl_code) {
         return Ok(cache);
     }
 
     dotenvy::dotenv().ok();
     let api_key = std::env::var("OPENAI_API_KEY").into_syn(span)?;
 
-    let hash = hash_content(&prompt);
+    let hash = hash_content(&dncl_code);
 
     let setting = QuerySetting {
         api_key: api_key.as_str(),
@@ -197,12 +197,12 @@ fn transpile(
     };
 
     if cfg!(test) {
-        dbg!(&[DNCL_SPEC, &prompt]);
+        dbg!(&[DNCL_SPEC, &dncl_code]);
     }
 
-    let response = setting.query(&[DNCL_SPEC, &prompt]).into_syn(span)?;
+    let response = setting.query(&[DNCL_SPEC, &dncl_code]).into_syn(span)?;
 
-    cache_result(&prompt, &response);
+    cache_result(&dncl_code, &response);
 
     Ok(response)
 }
@@ -218,7 +218,7 @@ mod test {
                 model: None,
                 seed: None,
                 max_completion_tokens: None,
-                prompt: value.parse().unwrap(),
+                dncl_code: value.parse().unwrap(),
             }
         }
     }

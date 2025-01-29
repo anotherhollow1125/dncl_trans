@@ -2,6 +2,21 @@ use proc_macro::TokenStream;
 
 mod impls;
 
+/// DNCLプログラムをRustプログラムにトランスパイルするマクロ
+///
+/// マクロの使用例:
+/// ```rust
+/// dncl_trans::dncl!(
+///     @model = "o1-preview";
+///     @max_completion_tokens = 4096;
+///     @seed = 123456;
+///     // @file = "もしファイル分割しているならこの変数で指定.dncl";
+///
+///     r#"
+///     /* ここにDNCL記法のコードを書く */
+///     "#
+/// );
+/// ```
 #[proc_macro]
 pub fn dncl(input: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(input as impls::MacroInput);
