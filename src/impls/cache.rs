@@ -14,21 +14,18 @@ struct CachedContent {
     response: String,
 }
 
-fn get_cache_file_path(setting: &QuerySetting<'_>, content: &str) -> eyre::Result<PathBuf> {
-    let out_dir = env::var("CARGO_MANIFEST_DIR")?;
-    let cache_dir = format!("{}/gpt_responses", out_dir);
+fn get_cache_file_path(setting: &QuerySetting, content: &str) -> eyre::Result<PathBuf> {
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR")?;
+    let cache_dir = format!("{}/gpt_responses", manifest_dir);
 
     if !fs::exists(&cache_dir)? {
         fs::create_dir_all(&cache_dir)?;
     }
 
-    Ok(PathBuf::from(out_dir).join(format!(
-        "gpt_responses/cache_{}.toml",
-        hash_content(&(setting, content))
-    )))
+    Ok(PathBuf::from(cache_dir).join(format!("cache_{}.toml", hash_content(&(setting, content)))))
 }
 
-pub fn load_cache(setting: &QuerySetting<'_>, content: &str) -> eyre::Result<Option<String>> {
+pub fn load_cache(setting: &QuerySetting, content: &str) -> eyre::Result<Option<String>> {
     let cache_file = get_cache_file_path(setting, content)?;
 
     // キャッシュを読み込む
@@ -45,7 +42,7 @@ pub fn load_cache(setting: &QuerySetting<'_>, content: &str) -> eyre::Result<Opt
     }
 }
 
-pub fn cache_result(setting: &QuerySetting<'_>, content: &str, response: &str) -> eyre::Result<()> {
+pub fn cache_result(setting: &QuerySetting, content: &str, response: &str) -> eyre::Result<()> {
     let cache_file = get_cache_file_path(setting, content)?;
 
     let QuerySetting {
@@ -62,6 +59,7 @@ pub fn cache_result(setting: &QuerySetting<'_>, content: &str, response: &str) -
         response: response.to_string(),
     };
 
+    // tomlとして保存するために変換
     let contents = toml::to_string(&contents)?;
 
     // 結果を保存

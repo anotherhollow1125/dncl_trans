@@ -10,6 +10,7 @@ mod impls;
 ///     @model = "o1-preview";
 ///     @max_completion_tokens = 4096;
 ///     @seed = 123456;
+///     @editing = false; // 編集中はtrueにすることでAPIを叩きに行かないようにする
 ///     // @file = "もしファイル分割しているならこの変数で指定.dncl";
 ///
 ///     r#"

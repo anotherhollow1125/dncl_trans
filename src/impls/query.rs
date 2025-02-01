@@ -23,15 +23,15 @@ struct RequestBody {
 }
 
 #[derive(Hash, Clone)]
-pub struct QuerySetting<'a> {
-    pub api_key: &'a str,
-    pub model: &'a str,
+pub struct QuerySetting {
+    pub api_key: String,
+    pub model: String,
     pub seed: i64,
     pub max_completion_tokens: Option<u32>,
 }
 
-impl QuerySetting<'_> {
-    fn common_header(&self) -> RequestBuilder {
+impl QuerySetting {
+    fn header(&self) -> RequestBuilder {
         let api_key_field = format!("Bearer {}", self.api_key);
 
         Client::new()
@@ -40,7 +40,15 @@ impl QuerySetting<'_> {
             .header("Authorization", api_key_field.as_str())
     }
 
-    fn make_request_body(&self, messages: Vec<Message>) -> RequestBody {
+    fn make_request_body(&self, messages: &[&str]) -> RequestBody {
+        let messages = messages
+            .iter()
+            .map(|s| Message {
+                role: Role::User,
+                content: s.to_string(),
+            })
+            .collect();
+
         let Self {
             model,
             seed,
@@ -57,22 +65,11 @@ impl QuerySetting<'_> {
     }
 
     pub fn query(&self, input_messages: &[&str]) -> eyre::Result<String> {
-        let messages = input_messages
-            .iter()
-            .map(|s| Message {
-                role: Role::User,
-                content: s.to_string(),
-            })
-            .collect();
-
-        let response_body = self
-            .common_header()
-            .json(&self.make_request_body(messages))
-            .send()?;
-
-        let response_body = response_body.text()?;
-
-        let body: Value = serde_json::from_slice(response_body.as_bytes())?;
+        let body: Value = self
+            .header()
+            .json(&self.make_request_body(input_messages))
+            .send()?
+            .json()?;
 
         match &body["choices"][0]["message"]["content"] {
             Value::String(s) => Ok(s.clone()),

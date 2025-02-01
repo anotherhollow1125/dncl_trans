@@ -2,14 +2,16 @@ use cache::{cache_result, hash_content, load_cache};
 use macro_::IntoSynRes;
 use proc_macro2::TokenStream;
 use query::QuerySetting;
+use syn::spanned::Spanned;
 
+mod available_model;
 mod cache;
 mod macro_;
 mod markdown;
 mod query;
 
+use available_model::check_available;
 pub use macro_::MacroInput;
-use syn::spanned::Spanned;
 
 pub fn dncl_impl(input: MacroInput) -> syn::Result<TokenStream> {
     let res = transpile(input)?;
@@ -31,7 +33,6 @@ fn file_content2token_stream(res_code: &str) -> TokenStream {
     }
 }
 
-const DEFAULT_MODEL: &str = "gpt-4o";
 const DNCL_SPEC: &str = r#"大学入試共通テスト用プログラミング言語DNCLの仕様を以下に示します。
 
 ---
@@ -165,7 +166,10 @@ DNCLの仕様ではありませんが、トランスパイルの都合上入力�
 
 次にDNCLのプログラムが与えられますので、エントリポイントとなる `main` 関数を含めたRustプログラムへトランスパイルしてください。
 
-なお、 `rand` 等のサードパーティクレートはユーザー側が自分で `Cargo.toml` に追加するため、使用しても構いませんが、不必要なクレートは含めないようにしてください。
+以下注意事項です。
+
+- `rand` 等のサードパーティクレートはユーザー側が自分で `Cargo.toml` に追加するため、使用しても構いませんが、不必要なクレートは含めないようにしてください。
+- あなたの出力はMarkdownのRustコードブロックからすべて抜き出します。そのため、エントリーポイント( `main` )外に存在してはいけないコード( `let` 文や式など、いわゆる、 `syn::Item` ではないRust構文要素)があると、コンパイルエラーになってしまいます。トランスパイラとしての出力以外ではRustコードブロックではなく何も指定なしのコードブロックを使用してください。
 "#;
 
 fn transpile(
@@ -182,19 +186,25 @@ fn transpile(
         return Ok("fn main() {}".to_string());
     }
 
+    // ソースコード部分の処理
+    // エラー用Spanを取り出し文字列化
     let span = dncl_code.span();
     let dncl_code = dncl_code.to_string().replace(";", "\n");
     let dncl_code = format!("```dncl\n{}\n```", dncl_code);
 
+    // 環境変数読み込み
     dotenvy::dotenv().ok();
     let api_key = std::env::var("OPENAI_API_KEY").into_syn(span)?;
+
+    // モデルが存在するかチェック
+    let model = check_available(&api_key, model)?;
 
     // なるべく冪等に近づけるために、seedが指定されていない場合はハッシュを指定
     let seed = seed.unwrap_or_else(|| hash_content(&dncl_code));
 
     let setting = QuerySetting {
-        api_key: api_key.as_str(),
-        model: model.as_deref().unwrap_or(DEFAULT_MODEL),
+        api_key,
+        model,
         seed,
         max_completion_tokens,
     };
@@ -216,6 +226,9 @@ fn transpile(
 
 #[cfg(test)]
 mod test {
+    use proc_macro2::Span;
+    use syn::LitStr;
+
     use super::transpile;
     use super::MacroInput;
 
@@ -238,8 +251,11 @@ mod test {
 "#;
 
         let macro_input = MacroInput {
-            model: Some("o1-preview".to_string()),
-            ..MacroInput::from(code.to_string())
+            model: None,
+            seed: None,
+            max_completion_tokens: None,
+            editing: false,
+            dncl_code: code.to_string().parse().unwrap(),
         };
 
         let res = transpile(macro_input).unwrap();
@@ -273,8 +289,11 @@ iを0からkazu-1まで1ずつ増やしながら繰り返す: ;
 "#;
 
         let macro_input = MacroInput {
-            model: Some("o1-preview".to_string()),
-            ..MacroInput::from(code.to_string())
+            model: Some(LitStr::new("o1-preview", Span::call_site())),
+            seed: None,
+            max_completion_tokens: None,
+            editing: false,
+            dncl_code: code.to_string().parse().unwrap(),
         };
 
         let res = transpile(macro_input).unwrap();

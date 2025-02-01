@@ -9,7 +9,7 @@ use syn::{
 use syn::{Ident, LitBool, LitInt, LitStr};
 
 pub struct MacroInput {
-    pub model: Option<String>,
+    pub model: Option<LitStr>,
     pub seed: Option<i64>,
     pub max_completion_tokens: Option<u32>,
     pub editing: bool,
@@ -18,7 +18,7 @@ pub struct MacroInput {
 
 impl Parse for MacroInput {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let mut model: Option<String> = None;
+        let mut model: Option<LitStr> = None;
         let mut seed: Option<i64> = None;
         let mut max_completion_tokens: Option<u32> = None;
         let mut file_content: Option<String> = None;
@@ -30,8 +30,8 @@ impl Parse for MacroInput {
             input.parse::<syn::Token![=]>()?;
             match ident {
                 i if i == "model" => {
-                    let value = input.parse::<LitStr>()?;
-                    model = Some(value.value());
+                    let lit = input.parse::<LitStr>()?;
+                    model = Some(lit);
                 }
                 i if i == "max_completion_tokens" => {
                     let value = input.parse::<LitInt>()?;
