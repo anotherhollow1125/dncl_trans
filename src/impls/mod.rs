@@ -4,13 +4,13 @@ use proc_macro2::TokenStream;
 use query::QuerySetting;
 use syn::spanned::Spanned;
 
-mod available_model;
+mod available_models;
 mod cache;
 mod macro_;
 mod markdown;
 mod query;
 
-use available_model::check_available;
+use available_models::check_available;
 pub use macro_::MacroInput;
 
 pub fn dncl_impl(input: MacroInput) -> syn::Result<TokenStream> {
