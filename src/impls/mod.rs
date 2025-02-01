@@ -1,4 +1,4 @@
-use cache::{cache_result, hash_content, load_cache};
+use cache::hash_content;
 use macro_::IntoSynRes;
 use proc_macro2::TokenStream;
 use query::QuerySetting;
@@ -209,17 +209,16 @@ fn transpile(
         max_completion_tokens,
     };
 
-    if let Some(cache) = load_cache(&setting, &dncl_code).into_syn(span)? {
+    // キャッシュがあるならクエリしない
+    if let Some(cache) = setting.load_cache(&dncl_code).into_syn(span)? {
         return Ok(cache);
     }
 
-    if cfg!(test) {
-        dbg!(&[DNCL_SPEC, &dncl_code]);
-    }
-
+    // トランスパイルクエリ部分
     let response = setting.query(&[DNCL_SPEC, &dncl_code]).into_syn(span)?;
 
-    cache_result(&setting, &dncl_code, &response).into_syn(span)?;
+    // 返答をキャッシュへ保存
+    setting.save_cache(&dncl_code, &response).into_syn(span)?;
 
     Ok(response)
 }

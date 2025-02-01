@@ -57,7 +57,7 @@ impl QuerySetting {
         } = self.clone();
 
         RequestBody {
-            model: model.to_string(),
+            model,
             messages,
             seed,
             max_completion_tokens,
