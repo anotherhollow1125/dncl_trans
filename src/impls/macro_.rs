@@ -6,30 +6,23 @@ use syn::{
     parse::{Parse, ParseStream},
     Token,
 };
-use syn::{Ident, LitInt, LitStr};
+use syn::{Ident, LitBool, LitInt, LitStr};
 
 pub struct MacroInput {
     pub model: Option<String>,
-    pub seed: Option<u64>,
-    pub max_completion_tokens: Option<u64>,
+    pub seed: Option<i64>,
+    pub max_completion_tokens: Option<u32>,
+    pub editing: bool,
     pub dncl_code: TokenStream,
 }
 
 impl Parse for MacroInput {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let mut model: Option<String> = None;
-        let mut seed = None;
-        let mut max_completion_tokens = None;
-        let mut file_content = None;
-
-        fn parse_puncts(input: ParseStream) -> syn::Result<()> {
-            if input.peek(Token![,]) {
-                input.parse::<Token![,]>()?;
-            } else if input.peek(Token![;]) {
-                input.parse::<Token![;]>()?;
-            }
-            Ok(())
-        }
+        let mut seed: Option<i64> = None;
+        let mut max_completion_tokens: Option<u32> = None;
+        let mut file_content: Option<String> = None;
+        let mut editing = false;
 
         while input.peek(Token![@]) {
             input.parse::<Token![@]>()?;
@@ -54,9 +47,18 @@ impl Parse for MacroInput {
 
                     file_content = Some(fs::read_to_string(file_path).into_syn(value.span())?);
                 }
+                i if i == "editing" => {
+                    editing = input.parse::<LitBool>()?.value;
+                }
                 _ => return Err(syn::Error::new(ident.span(), "unexpected field")),
             }
-            parse_puncts(input)?;
+
+            // `;` , `,` のパース
+            if input.peek(Token![,]) {
+                input.parse::<Token![,]>()?;
+            } else if input.peek(Token![;]) {
+                input.parse::<Token![;]>()?;
+            }
         }
 
         let dncl_code: TokenStream = if let Some(file_content) = file_content {
@@ -86,6 +88,7 @@ impl Parse for MacroInput {
             model,
             seed,
             max_completion_tokens,
+            editing,
             dncl_code,
         })
     }

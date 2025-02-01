@@ -173,28 +173,35 @@ fn transpile(
         model,
         seed,
         max_completion_tokens,
+        editing,
         dncl_code,
     }: MacroInput,
 ) -> syn::Result<String> {
+    // 編集中の場合は最小限のコードを返す
+    if editing {
+        return Ok("fn main() {}".to_string());
+    }
+
     let span = dncl_code.span();
     let dncl_code = dncl_code.to_string().replace(";", "\n");
     let dncl_code = format!("```dncl\n{}\n```", dncl_code);
 
-    if let Some(cache) = load_cache(&dncl_code) {
-        return Ok(cache);
-    }
-
     dotenvy::dotenv().ok();
     let api_key = std::env::var("OPENAI_API_KEY").into_syn(span)?;
 
-    let hash = hash_content(&dncl_code);
+    // なるべく冪等に近づけるために、seedが指定されていない場合はハッシュを指定
+    let seed = seed.unwrap_or_else(|| hash_content(&dncl_code));
 
     let setting = QuerySetting {
         api_key: api_key.as_str(),
         model: model.as_deref().unwrap_or(DEFAULT_MODEL),
-        seed: seed.unwrap_or(hash),
+        seed,
         max_completion_tokens,
     };
+
+    if let Some(cache) = load_cache(&setting, &dncl_code).into_syn(span)? {
+        return Ok(cache);
+    }
 
     if cfg!(test) {
         dbg!(&[DNCL_SPEC, &dncl_code]);
@@ -202,7 +209,7 @@ fn transpile(
 
     let response = setting.query(&[DNCL_SPEC, &dncl_code]).into_syn(span)?;
 
-    cache_result(&dncl_code, &response);
+    cache_result(&setting, &dncl_code, &response).into_syn(span)?;
 
     Ok(response)
 }
@@ -218,6 +225,7 @@ mod test {
                 model: None,
                 seed: None,
                 max_completion_tokens: None,
+                editing: false,
                 dncl_code: value.parse().unwrap(),
             }
         }

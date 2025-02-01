@@ -18,16 +18,16 @@ struct Message {
 struct RequestBody {
     model: String,
     messages: Vec<Message>,
-    seed: u64,
-    max_completion_tokens: Option<u64>,
+    seed: i64,
+    max_completion_tokens: Option<u32>,
 }
 
-#[derive(Clone)]
+#[derive(Hash, Clone)]
 pub struct QuerySetting<'a> {
     pub api_key: &'a str,
     pub model: &'a str,
-    pub seed: u64,
-    pub max_completion_tokens: Option<u64>,
+    pub seed: i64,
+    pub max_completion_tokens: Option<u32>,
 }
 
 impl QuerySetting<'_> {
@@ -51,7 +51,7 @@ impl QuerySetting<'_> {
         RequestBody {
             model: model.to_string(),
             messages,
-            seed: seed % 9223372036854775807,
+            seed,
             max_completion_tokens,
         }
     }
