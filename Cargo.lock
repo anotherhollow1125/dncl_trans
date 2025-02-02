@@ -112,7 +112,7 @@ dependencies = [
 
 [[package]]
 name = "dncl_trans"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "dotenvy",
  "eyre",

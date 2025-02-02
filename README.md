@@ -2,6 +2,17 @@
 
 DNCL (大学入試センター言語, Daigaku Nyushi Center Language) をRustにトランスパイルするマクロです。
 
+## DNCLとは
+
+日本の大学入試共通テスト (旧センター試験) 情報 において用いられる疑似プログラミング言語です。
+
+[共通テスト手順記述標準言語 (DNCL) の説明](https://www.dnc.ac.jp/albums/abm.php?d=67&f=abm00000819.pdf&n=R4_%E5%85%B1%E9%80%9A%E3%83%86%E3%82%B9%E3%83%88%E6%89%8B%E9%A0%86%E8%A8%98%E8%BF%B0%E6%A8%99%E6%BA%96%E8%A8%80%E8%AA%9E%EF%BC%88DNCL%EF%BC%89%E3%81%AE%E8%AA%AC%E6%98%8E.pdf)
+
+仕様は変更がなされるようで、本クレートは以下のバージョンに基づいています。
+
+- [令和７年度試験の問題作成の方向性、試作問題等 | 独立行政法人 大学入試センター](https://www.dnc.ac.jp/kyotsu/shiken_jouhou/r7/r7_kentoujoukyou/r7mondai.html)
+  - [試作問題「情報」の概要](https://www.dnc.ac.jp/albums/abm.php?d=511&f=abm00003141.pdf&n=6-1_%E6%A6%82%E8%A6%81%E3%80%8C%E6%83%85%E5%A0%B1%E3%80%8D.pdf)
+
 ## Example
 
 ```rust:Rust
