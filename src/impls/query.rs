@@ -77,3 +77,24 @@ impl QuerySetting {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::QuerySetting;
+
+    #[test]
+    fn test_query() {
+        dotenvy::dotenv().ok();
+
+        let setting = QuerySetting {
+            api_key: std::env::var("OPENAI_API_KEY").unwrap(),
+            model: "gpt-3.5-turbo".to_string(),
+            seed: 123456,
+            max_completion_tokens: Some(4096),
+        };
+
+        let response = setting.query(&["Hello, how are you?"]).unwrap();
+
+        dbg!(response);
+    }
+}
